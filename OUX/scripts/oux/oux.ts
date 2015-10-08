@@ -4,7 +4,8 @@
 /// <reference path="../typings/moment/moment.d.ts" />
 "use strict";
 
-var defaultLocale: string = "fr-fr",
+var defaultLocale: string = "en-gb",
+    templatePath: string = "oux/oux-bootstrap.min",
     appPath: string = "oux/app.min",
     debug: boolean = true;
 
@@ -65,13 +66,15 @@ require.config({
         "angular-locale": "i18n/angular-locale_" + OUX.IfBlank(localStorage.getItem("locale"), defaultLocale),
         "angular-route": "angular-route.min",
         "moment": "moment-with-locales.min",
+        "templates": templatePath,
         "app": appPath
     },
     shim: {
         "angular": { exports: "angular" },
         "angular-locale": { deps: ["angular"] },
         "angular-route": { deps: ["angular", "angular-locale"] },
-        "app": { deps: ["angular", "angular-locale", "angular-route", "oux"], exports: "app" }
+        "templates": { deps: ["oux"] },
+        "app": { deps: ["angular", "angular-locale", "angular-route", "oux", "templates"], exports: "app" }
     }
 });
 
@@ -86,16 +89,17 @@ define("oux", ["moment", "angular", "angular-locale", "angular-route"], function
         $locale: angular.ILocaleService,
         $log: angular.ILogService) {
         moment.locale($locale.id);
-        $log.debug("OUX core running!");
-        $log.info({
+        $log.info(angular.fromJson(angular.toJson({
             locale: $locale.id,
-            momentDateFormat: moment.localeData().longDateFormat("L"),
-            angularDateFormat: $locale.DATETIME_FORMATS.shortDate,
+            dateFormat: moment.localeData().longDateFormat("L"),
             currencySymbol: $locale.NUMBER_FORMATS.CURRENCY_SYM,
             decimalSeparator: $locale.NUMBER_FORMATS.DECIMAL_SEP,
             groupSeparator: $locale.NUMBER_FORMATS.GROUP_SEP
-        });
+        })));
+        $log.debug("OUX core running!");
     }]);
+
+    return oux;
 
 });
 
@@ -104,4 +108,3 @@ require(["angular", "app"], function (angular: angular.IAngularStatic, app: angu
     app.run(["$log", function ($log: angular.ILogService) { $log.debug("OUX application \"" + app.name + "\" running!"); }]);
     angular.element(document).ready(function () { angular.bootstrap(document, [app.name]); });
 });
-
