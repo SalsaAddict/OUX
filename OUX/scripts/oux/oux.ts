@@ -4,7 +4,9 @@
 /// <reference path="../typings/moment/moment.d.ts" />
 "use strict";
 
-var defaultLocale: string = "fr-fr";
+var defaultLocale: string = "fr-fr",
+    appPath: string = "oux/app.min",
+    debug: boolean = true;
 
 module OUX {
     "use strict";
@@ -36,7 +38,7 @@ module OUX {
         export class Date {
             static get viewFormat(): string { return moment.localeData().longDateFormat("L"); }
             static get modelFormat(): string { return "YYYY-MM-DD"; }
-            static Parser = ($viewValue: any) => {
+            static Parser = ($viewValue: string) => {
                 var value: moment.Moment = undefined;
                 switch (Option($viewValue)) {
                     case "today": value = moment(); break;
@@ -49,63 +51,9 @@ module OUX {
                 return (value.isValid()) ? value.format(Date.modelFormat) : undefined;
             }
             static Formatter = ($modelValue: any) => {
-                var value: moment.Moment = moment($modelValue, Date.modelFormat);
+                var value: moment.Moment = moment(String($modelValue).substr(0, 10), Date.modelFormat);
                 return (value.isValid()) ? value.format(Date.viewFormat) : undefined;
             }
-        }
-    }
-    export module Parameter {
-        export interface IScope extends angular.IScope {
-            name: string; type: string; value: string; format: string; required: string;
-        }
-        export class Controller {
-            static $inject: string[] = ["$scope", "$routeParams", "$parse", "$log"];
-            constructor(
-                private $scope: IScope,
-                private $routeParams: angular.route.IRouteParamsService,
-                private $parse: angular.IParseService,
-                private $log: angular.ILogService) { }
-            get name(): string { return IfBlank(this.$scope.name); }
-            get value(): any {
-                var value: any = undefined;
-                switch (Option(this.$scope.type)) {
-                    case "route": value = this.$routeParams[IfBlank(this.$scope.value, this.name)]; break;
-                    case "scope": value = this.$parse(this.$scope.value)(this.$scope.$parent); break;
-                    default: value = this.$scope.value; break;
-                }
-                if (IsBlank(value)) { return null; }
-                switch (Option(this.$scope.format)) {
-                    case "date":
-                        value = OUX.Convert.Date.Parser(OUX.Convert.Date.Formatter(value));
-                        break;
-                    case "object":
-                        value = angular.fromJson(angular.toJson(value));
-                        break;
-                    default: value = String(value);
-                }
-                return IfBlank(value, null);
-            }
-            get isObject(): boolean { return this.$scope.format === "object"; }
-            get required(): boolean { return Option(this.$scope.required) === "true"; }
-        }
-        export function DirectiveFactory(): angular.IDirectiveFactory {
-            var factory = function ($log: angular.ILogService): angular.IDirective {
-                return {
-                    restrict: "E",
-                    scope: <IScope> { name: "@", type: "@", value: "@", format: "@", required: "@" },
-                    controller: Controller,
-                    require: ["ouxParameter"],
-                    link: function (
-                        $scope: IScope,
-                        iElement: angular.IAugmentedJQuery,
-                        iAttrs: angular.IAttributes,
-                        controllers: [Controller]) {
-                        $log.debug(controllers[0].name);
-                    }
-                };
-            }
-            factory.$inject = ["$log"];
-            return factory;
         }
     }
 }
@@ -116,23 +64,29 @@ require.config({
         "angular": "angular.min",
         "angular-locale": "i18n/angular-locale_" + OUX.IfBlank(localStorage.getItem("locale"), defaultLocale),
         "angular-route": "angular-route.min",
-        "moment": "moment-with-locales.min"
+        "moment": "moment-with-locales.min",
+        "app": appPath
     },
     shim: {
         "angular": { exports: "angular" },
         "angular-locale": { deps: ["angular"] },
-        "angular-route": { deps: ["angular", "angular-locale"] }
+        "angular-route": { deps: ["angular", "angular-locale"] },
+        "app": { deps: ["angular", "angular-locale", "angular-route", "oux"], exports: "app" }
     }
 });
 
-require(["moment", "angular", "angular-locale", "angular-route"], function (
+define("oux", ["moment", "angular", "angular-locale", "angular-route"], function (
     moment: moment.MomentStatic, angular: angular.IAngularStatic) {
+
     var oux: angular.IModule = angular.module("oux", ["ngRoute"]);
+
+    oux.config(["$logProvider", function ($logProvider: angular.ILogProvider) { $logProvider.debugEnabled(debug); }]);
 
     oux.run(["$locale", "$log", function (
         $locale: angular.ILocaleService,
         $log: angular.ILogService) {
         moment.locale($locale.id);
+        $log.debug("OUX core running!");
         $log.info({
             locale: $locale.id,
             momentDateFormat: moment.localeData().longDateFormat("L"),
@@ -143,9 +97,11 @@ require(["moment", "angular", "angular-locale", "angular-route"], function (
         });
     }]);
 
-    oux.directive("ouxParameter", OUX.Parameter.DirectiveFactory());
-
-    angular.element(document).ready(function () {
-        angular.bootstrap(document, ["oux"]);
-    });
 });
+
+require(["angular", "app"], function (angular: angular.IAngularStatic, app: angular.IModule) {
+    app.config(["$logProvider", function ($logProvider: angular.ILogProvider) { $logProvider.debugEnabled(debug); }]);
+    app.run(["$log", function ($log: angular.ILogService) { $log.debug("OUX application \"" + app.name + "\" running!"); }]);
+    angular.element(document).ready(function () { angular.bootstrap(document, [app.name]); });
+});
+

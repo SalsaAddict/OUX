@@ -3,7 +3,7 @@
 /// <reference path="../typings/angularjs/angular-route.d.ts" />
 /// <reference path="../typings/moment/moment.d.ts" />
 "use strict";
-var defaultLocale = "fr-fr";
+var defaultLocale = "fr-fr", appPath = "oux/app.min", debug = true;
 var OUX;
 (function (OUX) {
     "use strict";
@@ -86,89 +86,13 @@ var OUX;
                 return (value.isValid()) ? value.format(Date.modelFormat) : undefined;
             };
             Date.Formatter = function ($modelValue) {
-                var value = moment($modelValue, Date.modelFormat);
+                var value = moment(String($modelValue).substr(0, 10), Date.modelFormat);
                 return (value.isValid()) ? value.format(Date.viewFormat) : undefined;
             };
             return Date;
         })();
         Convert.Date = Date;
     })(Convert = OUX.Convert || (OUX.Convert = {}));
-    var Parameter;
-    (function (Parameter) {
-        var Controller = (function () {
-            function Controller($scope, $routeParams, $parse, $log) {
-                this.$scope = $scope;
-                this.$routeParams = $routeParams;
-                this.$parse = $parse;
-                this.$log = $log;
-            }
-            Object.defineProperty(Controller.prototype, "name", {
-                get: function () { return IfBlank(this.$scope.name); },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Controller.prototype, "value", {
-                get: function () {
-                    var value = undefined;
-                    switch (Option(this.$scope.type)) {
-                        case "route":
-                            value = this.$routeParams[IfBlank(this.$scope.value, this.name)];
-                            break;
-                        case "scope":
-                            value = this.$parse(this.$scope.value)(this.$scope.$parent);
-                            break;
-                        default:
-                            value = this.$scope.value;
-                            break;
-                    }
-                    if (IsBlank(value)) {
-                        return null;
-                    }
-                    switch (Option(this.$scope.format)) {
-                        case "date":
-                            value = OUX.Convert.Date.Parser(OUX.Convert.Date.Formatter(value));
-                            break;
-                        case "object":
-                            value = angular.fromJson(angular.toJson(value));
-                            break;
-                        default: value = String(value);
-                    }
-                    return IfBlank(value, null);
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Controller.prototype, "isObject", {
-                get: function () { return this.$scope.format === "object"; },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Controller.prototype, "required", {
-                get: function () { return Option(this.$scope.required) === "true"; },
-                enumerable: true,
-                configurable: true
-            });
-            Controller.$inject = ["$scope", "$routeParams", "$parse", "$log"];
-            return Controller;
-        })();
-        Parameter.Controller = Controller;
-        function DirectiveFactory() {
-            var factory = function ($log) {
-                return {
-                    restrict: "E",
-                    scope: { name: "@", type: "@", value: "@", format: "@", required: "@" },
-                    controller: Controller,
-                    require: ["ouxParameter"],
-                    link: function ($scope, iElement, iAttrs, controllers) {
-                        $log.debug(controllers[0].name);
-                    }
-                };
-            };
-            factory.$inject = ["$log"];
-            return factory;
-        }
-        Parameter.DirectiveFactory = DirectiveFactory;
-    })(Parameter = OUX.Parameter || (OUX.Parameter = {}));
 })(OUX || (OUX = {}));
 require.config({
     baseUrl: "scripts",
@@ -176,18 +100,22 @@ require.config({
         "angular": "angular.min",
         "angular-locale": "i18n/angular-locale_" + OUX.IfBlank(localStorage.getItem("locale"), defaultLocale),
         "angular-route": "angular-route.min",
-        "moment": "moment-with-locales.min"
+        "moment": "moment-with-locales.min",
+        "app": appPath
     },
     shim: {
         "angular": { exports: "angular" },
         "angular-locale": { deps: ["angular"] },
-        "angular-route": { deps: ["angular", "angular-locale"] }
+        "angular-route": { deps: ["angular", "angular-locale"] },
+        "app": { deps: ["angular", "angular-locale", "angular-route", "oux"], exports: "app" }
     }
 });
-require(["moment", "angular", "angular-locale", "angular-route"], function (moment, angular) {
+define("oux", ["moment", "angular", "angular-locale", "angular-route"], function (moment, angular) {
     var oux = angular.module("oux", ["ngRoute"]);
+    oux.config(["$logProvider", function ($logProvider) { $logProvider.debugEnabled(debug); }]);
     oux.run(["$locale", "$log", function ($locale, $log) {
             moment.locale($locale.id);
+            $log.debug("OUX core running!");
             $log.info({
                 locale: $locale.id,
                 momentDateFormat: moment.localeData().longDateFormat("L"),
@@ -197,9 +125,10 @@ require(["moment", "angular", "angular-locale", "angular-route"], function (mome
                 groupSeparator: $locale.NUMBER_FORMATS.GROUP_SEP
             });
         }]);
-    oux.directive("ouxParameter", OUX.Parameter.DirectiveFactory());
-    angular.element(document).ready(function () {
-        angular.bootstrap(document, ["oux"]);
-    });
+});
+require(["angular", "app"], function (angular, app) {
+    app.config(["$logProvider", function ($logProvider) { $logProvider.debugEnabled(debug); }]);
+    app.run(["$log", function ($log) { $log.debug("OUX application \"" + app.name + "\" running!"); }]);
+    angular.element(document).ready(function () { angular.bootstrap(document, [app.name]); });
 });
 //# sourceMappingURL=oux.js.map

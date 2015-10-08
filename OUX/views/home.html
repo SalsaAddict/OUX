@@ -1,0 +1,11 @@
+﻿<div ng-init="Person = {Forename: 'Pierre', Surname: 'Henry', DOB: '1975-08-03'}"></div>
+<h1>
+    Home
+</h1>
+<input type="text" ng-model="Person.Forename" />
+<oux>
+    <oux-form save="apiClaim"></oux-form>
+</oux>
+{{oux.procedures["apiClaim"]}}
+<button type="button" ng-click="oux.execute('apiSave')">Execute</button>
+
