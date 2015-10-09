@@ -4,10 +4,17 @@
 /// <reference path="../typings/moment/moment.d.ts" />
 "use strict";
 
-var app: angular.IModule = angular.module("Advent", ["ngRoute", "oux"]);
+define(["moment", "angular", "oux-core", "templates"], function (
+    moment: moment.MomentStatic, angular: angular.IAngularStatic, oux: angular.IModule) {
 
-app.config(["$routeProvider", function ($routeProvider: angular.route.IRouteProvider) {
-    $routeProvider
-        .when("/home/:IncidentId?/:ClaimantId?/:ClaimId?", { templateUrl: "views/home.html" })
-        .otherwise({ redirectTo: "/home" });
-}]);
+    var app: angular.IModule = angular.module("Advent", ["ngRoute", oux.name]);
+
+    app.config(["$routeProvider", function ($routeProvider: angular.route.IRouteProvider) {
+        $routeProvider
+            .when("/home/:IncidentId?/:ClaimantId?/:ClaimId?", { templateUrl: "views/home.html" })
+            .otherwise({ redirectTo: "/home" });
+    }]);
+
+    return app;
+
+});

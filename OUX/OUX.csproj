@@ -841,6 +841,10 @@
     <Content Include="scripts\oux\oux-bootstrap.min.js">
       <DependentUpon>oux-bootstrap.js</DependentUpon>
     </Content>
+    <Content Include="scripts\oux\oux-core.js" />
+    <Content Include="scripts\oux\oux-core.min.js">
+      <DependentUpon>oux-core.js</DependentUpon>
+    </Content>
     <Content Include="scripts\oux\oux.js.map" />
     <Content Include="scripts\oux\oux.min.js.map">
       <DependentUpon>oux.min.js</DependentUpon>
@@ -856,6 +860,10 @@
       <DependentUpon>oux-bootstrap.min.js</DependentUpon>
     </Content>
     <Content Include="scripts\jquery-2.1.4.min.map" />
+    <Content Include="scripts\oux\oux-core.js.map" />
+    <Content Include="scripts\oux\oux-core.min.js.map">
+      <DependentUpon>oux-core.min.js</DependentUpon>
+    </Content>
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>
@@ -884,6 +892,7 @@
   <ItemGroup>
     <TypeScriptCompile Include="scripts\oux\app.ts" />
     <TypeScriptCompile Include="scripts\oux\oux-bootstrap.ts" />
+    <TypeScriptCompile Include="scripts\oux\oux-core.ts" />
     <TypeScriptCompile Include="scripts\oux\oux.ts" />
     <TypeScriptCompile Include="scripts\typings\angularjs\angular-animate.d.ts" />
     <TypeScriptCompile Include="scripts\typings\angularjs\angular-cookies.d.ts" />
