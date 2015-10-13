@@ -10,6 +10,7 @@ require.config({
         "angular": "angular.min",
         "angular-locale": "i18n/angular-locale_" + (localStorage.getItem("locale") || defaultLocale),
         "angular-route": "angular-route.min",
+        "angular-ui-bootstrap": "angular-ui/ui-bootstrap-tpls.min",
         "moment": "moment-with-locales.min",
         "oux-core": "oux/oux-core.min",
         "templates": templatePath,
@@ -18,7 +19,8 @@ require.config({
     shim: {
         "angular": { exports: "angular" },
         "angular-locale": { deps: ["angular"] },
-        "angular-route": { deps: ["angular", "angular-locale"] }
+        "angular-route": { deps: ["angular", "angular-locale"] },
+        "angular-ui-bootstrap": { deps: ["angular", "angular-locale"] }
     }
 });
 require(["angular", "oux-core", "app"], function (angular, oux, app) {

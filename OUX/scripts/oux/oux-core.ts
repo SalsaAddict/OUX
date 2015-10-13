@@ -1,6 +1,7 @@
 ﻿/// <reference path="../typings/requirejs/require.d.ts" />
 /// <reference path="../typings/angularjs/angular.d.ts" />
 /// <reference path="../typings/angularjs/angular-route.d.ts" />
+/// <reference path="../typings/angular-ui-bootstrap/angular-ui-bootstrap.d.ts" />
 /// <reference path="../typings/moment/moment.d.ts" />
 "use strict";
 
@@ -276,12 +277,38 @@ module OUX {
             return factory;
         }
     }
+    export module Input {
+        export interface IScope extends angular.IScope {
+            label: string;
+            ngModel: angular.INgModelController;
+            required: string;
+            form: angular.IFormController
+        }
+        export class Controller {
+            static $inject: string[] = ["$scope"];
+            constructor(private $scope: IScope) { }
+            get label(): string { return this.$scope.label; }
+            get model(): angular.INgModelController { return this.$scope.ngModel; }
+            set model(value: angular.INgModelController) { this.$scope.ngModel = value; }
+            get required(): boolean { return Option(this.$scope.required) === "true"; }
+            get invalid(): boolean { return this.$scope.form.$invalid; }
+        }
+        export function Directive(): angular.IDirective {
+            return {
+                restrict: "E",
+                templateUrl: "ouxInput.html",
+                scope: { label: "@", ngModel: "=", required: "@" },
+                controller: Controller,
+                controllerAs: "ouxInput"
+            };
+        }
+    }
 }
 
-define(["moment", "angular", "angular-locale", "angular-route"], function (
+define(["moment", "angular", "angular-locale", "angular-route", "angular-ui-bootstrap"], function (
     moment: moment.MomentStatic, angular: angular.IAngularStatic) {
 
-    var oux: angular.IModule = angular.module("oux", ["ngRoute"]);
+    var oux: angular.IModule = angular.module("oux", ["ngRoute", "ui.bootstrap"]);
 
     oux.run(["$locale", "$log", function (
         $locale: angular.ILocaleService,
@@ -300,6 +327,7 @@ define(["moment", "angular", "angular-locale", "angular-route"], function (
     oux.directive("ouxProcedure", OUX.Procedure.Directive);
     oux.directive("ouxParameter", OUX.Parameter.Directive);
     oux.directive("ouxForm", OUX.Form.DirectiveFactory());
+    oux.directive("ouxInput", OUX.Input.Directive);
 
     return oux;
 

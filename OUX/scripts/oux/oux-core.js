@@ -1,6 +1,7 @@
 /// <reference path="../typings/requirejs/require.d.ts" />
 /// <reference path="../typings/angularjs/angular.d.ts" />
 /// <reference path="../typings/angularjs/angular-route.d.ts" />
+/// <reference path="../typings/angular-ui-bootstrap/angular-ui-bootstrap.d.ts" />
 /// <reference path="../typings/moment/moment.d.ts" />
 "use strict";
 var OUX;
@@ -405,9 +406,51 @@ var OUX;
         }
         Form.DirectiveFactory = DirectiveFactory;
     })(Form = OUX.Form || (OUX.Form = {}));
+    var Input;
+    (function (Input) {
+        var Controller = (function () {
+            function Controller($scope) {
+                this.$scope = $scope;
+            }
+            Object.defineProperty(Controller.prototype, "label", {
+                get: function () { return this.$scope.label; },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Controller.prototype, "model", {
+                get: function () { return this.$scope.ngModel; },
+                set: function (value) { this.$scope.ngModel = value; },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Controller.prototype, "required", {
+                get: function () { return Option(this.$scope.required) === "true"; },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Controller.prototype, "invalid", {
+                get: function () { return this.$scope.form.$invalid; },
+                enumerable: true,
+                configurable: true
+            });
+            Controller.$inject = ["$scope"];
+            return Controller;
+        })();
+        Input.Controller = Controller;
+        function Directive() {
+            return {
+                restrict: "E",
+                templateUrl: "ouxInput.html",
+                scope: { label: "@", ngModel: "=", required: "@" },
+                controller: Controller,
+                controllerAs: "ouxInput"
+            };
+        }
+        Input.Directive = Directive;
+    })(Input = OUX.Input || (OUX.Input = {}));
 })(OUX || (OUX = {}));
-define(["moment", "angular", "angular-locale", "angular-route"], function (moment, angular) {
-    var oux = angular.module("oux", ["ngRoute"]);
+define(["moment", "angular", "angular-locale", "angular-route", "angular-ui-bootstrap"], function (moment, angular) {
+    var oux = angular.module("oux", ["ngRoute", "ui.bootstrap"]);
     oux.run(["$locale", "$log", function ($locale, $log) {
             moment.locale($locale.id);
             $log.info({
@@ -422,6 +465,7 @@ define(["moment", "angular", "angular-locale", "angular-route"], function (momen
     oux.directive("ouxProcedure", OUX.Procedure.Directive);
     oux.directive("ouxParameter", OUX.Parameter.Directive);
     oux.directive("ouxForm", OUX.Form.DirectiveFactory());
+    oux.directive("ouxInput", OUX.Input.Directive);
     return oux;
 });
 //# sourceMappingURL=oux-core.js.map
