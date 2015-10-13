@@ -65,6 +65,10 @@
     <Content Include="content\bootstrap.min.css" />
     <Content Include="content\font-awesome.css" />
     <Content Include="content\font-awesome.min.css" />
+    <Content Include="content\oux.css" />
+    <Content Include="content\oux.min.css">
+      <DependentUpon>oux.css</DependentUpon>
+    </Content>
     <Content Include="fonts\fontawesome-webfont.svg" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
     <Content Include="packages.config" />

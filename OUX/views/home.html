@@ -1,12 +1,11 @@
-﻿<div ng-init="Person = {Show: false, Forename: 'Pierre', Surname: 'Henry', DOB: '1975-08-03'}"></div>
-<h1>
-    Home
-</h1>
-<input type="checkbox" ng-model="Person.Show" />
-<input type="text" ng-model="Person.Forename" />
-<oux>
-    <oux-form load="apiClaim as Claim" save="apiClaimSave" delete="apiClaimDelete"></oux-form>
-</oux>
-{{oux.procedures["apiClaim"]}}
-<button type="button" ng-click="oux.execute('apiClaim')">Execute</button>
+﻿<div class="container" ng-init="Person = {Show: false, Forename: 'Pierre', Surname: 'Henry', DOB: '1975-08-03'}">
+    <oux>
+        <oux-form heading="Claim Details" load="apiClaim as Claim" save="apiClaimSave">
+            <input type="checkbox" ng-model="Person.Show" />
+            <input type="text" ng-model="Person.Forename" required />
+        </oux-form>
+    </oux>
+    {{oux.procedures["apiClaim"]}}
+    <button type="button" ng-click="oux.execute('apiClaim')">Execute</button>
 
+</div>

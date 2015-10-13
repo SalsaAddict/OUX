@@ -211,11 +211,24 @@ module OUX {
             form: angular.IFormController
         }
         export class Controller {
-            static $inject: string[] = ["$scope"];
-            constructor(private $scope: IScope) { }
-            get editable(): boolean { return (!IsBlank(this.$scope.save)); }
+            static $inject: string[] = ["$scope", "$route"];
+            constructor(private $scope: IScope, private $route: angular.route.IRouteService) { }
+            get loadable(): boolean { return !IsBlank(this.$scope.load); }
+            get loadProcName(): string { return this.$scope.load.split(" as ", 2)[0]; }
+            get loadProcAlias(): string { return this.$scope.load.split(" as ", 2)[1] || this.loadProcName; }
+            public load: Function = undefined;
+            get editable(): boolean { return !IsBlank(this.$scope.save); }
             get saveProcName(): string { return this.$scope.save.split(" as ", 2)[0]; }
             get saveProcAlias(): string { return this.$scope.save.split(" as ", 2)[1] || this.saveProcName; }
+            public save: Function = undefined;
+            get deletable(): boolean { return !IsBlank(this.$scope.delete); }
+            get deleteProcName(): string { return this.$scope.delete.split(" as ", 2)[0]; }
+            get deleteProcAlias(): string { return this.$scope.delete.split(" as ", 2)[1] || this.deleteProcName; }
+            public delete: Function = undefined;
+            public undo = () => { this.$route.reload(); }
+            get heading(): string { return IfBlank(this.$scope.heading); }
+            get dirty(): boolean { return this.$scope.form.$dirty; }
+            get invalid(): boolean { return this.$scope.form.$invalid; }
         }
         export function DirectiveFactory(): angular.IDirectiveFactory {
             var factory = function Directive($injector: angular.auto.IInjectorService): angular.IDirective {
@@ -232,7 +245,7 @@ module OUX {
                         iElement: angular.IAugmentedJQuery,
                         iAttrs: angular.IAttributes,
                         controllers: [Context.Controller, Controller]) {
-                        function checkProcedureExists(namingExpression: string, execute: boolean = false) {
+                        function checkProcedureExists(namingExpression: string) {
                             var s: string[] = namingExpression.split(" as ", 2),
                                 name: string = s[0], alias: string = (s.length > 1) ? s[1] : s[0];
                             if (angular.isUndefined(controllers[0].procedures[alias])) {
@@ -242,11 +255,20 @@ module OUX {
                                             { name: name, alias: alias, routeParams: "true" })
                                     }));
                             }
-                            if (execute) { controllers[0].execute(alias); }
                         }
-                        if (!IsBlank($scope.load)) { checkProcedureExists($scope.load, true); }
-                        if (!IsBlank($scope.save)) { checkProcedureExists($scope.save); }
-                        if (!IsBlank($scope.delete)) { checkProcedureExists($scope.delete); }
+                        if (controllers[1].loadable) {
+                            checkProcedureExists($scope.load);
+                            controllers[1].load = function () { controllers[0].execute(controllers[1].loadProcAlias); };
+                            controllers[1].load();
+                        }
+                        if (controllers[1].editable) {
+                            checkProcedureExists($scope.save);
+                            controllers[1].save = function () { controllers[0].execute(controllers[1].saveProcAlias); };
+                        }
+                        if (controllers[1].deletable) {
+                            checkProcedureExists($scope.delete);
+                            controllers[1].delete = function () { controllers[0].execute(controllers[1].deleteProcAlias); };
+                        }
                     }
                 };
             };

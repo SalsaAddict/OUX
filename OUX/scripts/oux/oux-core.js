@@ -292,11 +292,32 @@ var OUX;
     var Form;
     (function (Form) {
         var Controller = (function () {
-            function Controller($scope) {
+            function Controller($scope, $route) {
+                var _this = this;
                 this.$scope = $scope;
+                this.$route = $route;
+                this.load = undefined;
+                this.save = undefined;
+                this.delete = undefined;
+                this.undo = function () { _this.$route.reload(); };
             }
+            Object.defineProperty(Controller.prototype, "loadable", {
+                get: function () { return !IsBlank(this.$scope.load); },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Controller.prototype, "loadProcName", {
+                get: function () { return this.$scope.load.split(" as ", 2)[0]; },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Controller.prototype, "loadProcAlias", {
+                get: function () { return this.$scope.load.split(" as ", 2)[1] || this.loadProcName; },
+                enumerable: true,
+                configurable: true
+            });
             Object.defineProperty(Controller.prototype, "editable", {
-                get: function () { return (!IsBlank(this.$scope.save)); },
+                get: function () { return !IsBlank(this.$scope.save); },
                 enumerable: true,
                 configurable: true
             });
@@ -310,7 +331,37 @@ var OUX;
                 enumerable: true,
                 configurable: true
             });
-            Controller.$inject = ["$scope"];
+            Object.defineProperty(Controller.prototype, "deletable", {
+                get: function () { return !IsBlank(this.$scope.delete); },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Controller.prototype, "deleteProcName", {
+                get: function () { return this.$scope.delete.split(" as ", 2)[0]; },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Controller.prototype, "deleteProcAlias", {
+                get: function () { return this.$scope.delete.split(" as ", 2)[1] || this.deleteProcName; },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Controller.prototype, "heading", {
+                get: function () { return IfBlank(this.$scope.heading); },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Controller.prototype, "dirty", {
+                get: function () { return this.$scope.form.$dirty; },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Controller.prototype, "invalid", {
+                get: function () { return this.$scope.form.$invalid; },
+                enumerable: true,
+                configurable: true
+            });
+            Controller.$inject = ["$scope", "$route"];
             return Controller;
         })();
         Form.Controller = Controller;
@@ -325,26 +376,26 @@ var OUX;
                     controllerAs: "ouxForm",
                     require: ["^^oux", "ouxForm"],
                     link: function ($scope, iElement, iAttrs, controllers) {
-                        function checkProcedureExists(namingExpression, execute) {
-                            if (execute === void 0) { execute = false; }
+                        function checkProcedureExists(namingExpression) {
                             var s = namingExpression.split(" as ", 2), name = s[0], alias = (s.length > 1) ? s[1] : s[0];
                             if (angular.isUndefined(controllers[0].procedures[alias])) {
                                 controllers[0].addProcedure($injector.instantiate(Procedure.Controller, {
                                     $scope: angular.extend($scope.$new(true), { name: name, alias: alias, routeParams: "true" })
                                 }));
                             }
-                            if (execute) {
-                                controllers[0].execute(alias);
-                            }
                         }
-                        if (!IsBlank($scope.load)) {
-                            checkProcedureExists($scope.load, true);
+                        if (controllers[1].loadable) {
+                            checkProcedureExists($scope.load);
+                            controllers[1].load = function () { controllers[0].execute(controllers[1].loadProcAlias); };
+                            controllers[1].load();
                         }
-                        if (!IsBlank($scope.save)) {
+                        if (controllers[1].editable) {
                             checkProcedureExists($scope.save);
+                            controllers[1].save = function () { controllers[0].execute(controllers[1].saveProcAlias); };
                         }
-                        if (!IsBlank($scope.delete)) {
+                        if (controllers[1].deletable) {
                             checkProcedureExists($scope.delete);
+                            controllers[1].delete = function () { controllers[0].execute(controllers[1].deleteProcAlias); };
                         }
                     }
                 };
