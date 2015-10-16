@@ -1,12 +1,12 @@
-﻿<div class="container" ng-init="Person = {Show: false, Forename: 'Pierre', Surname: 'Henry', DOB: '1975-08-03'}">
+﻿<div class="container" ng-init="Person = {Show: false, Forename: 123456.45, Surname: 'Henry', DOB: '1975-08-03'}">
     <oux>
         <oux-form heading="Claim Detail" load="apiClaim as Claim" save="apiClaimSave">
-            <oux-input label="Forename" ng-model="Person.Forename" required="true"></oux-input>
-            <oux-input label="Surname" ng-model="Person.Surname" required="true"></oux-input>
+            <oux-input label="Forename" ng-model="Person.Forename" oux-save required></oux-input>
+            <oux-input label="Surname" ng-model="Person.Surname" oux-save required></oux-input>
+            <oux-input label="Email Address" ng-model="Person.Email" format="email" oux-save required></oux-input>
+            <oux-input label="Website" ng-model="Person.Website" format="url" oux-save></oux-input>
+            <oux-input label="Amount" ng-model="Person.Amount" format="decimal" oux-save required></oux-input>
         </oux-form>
     </oux>
-    {{oux.procedures["apiClaim"]}}
-    <button type="button" ng-click="oux.execute('apiClaim')">Execute</button>
-
 </div>
 <pre>{{Person}}</pre>

@@ -3,7 +3,7 @@
 /// <reference path="../typings/angularjs/angular-route.d.ts" />
 /// <reference path="../typings/moment/moment.d.ts" />
 "use strict";
-var defaultLocale = "en-gb", templatePath = "oux/oux-bootstrap.min", appPath = "oux/app.min", debug = true;
+var defaultLocale = "fr-fr", templatePath = "oux/oux-bootstrap.min", appPath = "oux/app.min", debug = true;
 require.config({
     baseUrl: "scripts",
     paths: {

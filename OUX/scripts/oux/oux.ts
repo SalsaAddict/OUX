@@ -4,7 +4,7 @@
 /// <reference path="../typings/moment/moment.d.ts" />
 "use strict";
 
-var defaultLocale: string = "en-gb",
+var defaultLocale: string = "fr-fr",
     templatePath: string = "oux/oux-bootstrap.min",
     appPath: string = "oux/app.min",
     debug: boolean = true;

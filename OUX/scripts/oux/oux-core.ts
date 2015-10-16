@@ -151,19 +151,27 @@ module OUX {
                 scope: <IScope> { name: "@", alias: "@", run: "@", routeParams: "@" },
                 controller: Controller,
                 require: ["^^oux", "ouxProcedure"],
-                link: function (
-                    $scope: IScope,
-                    iElement: angular.IAugmentedJQuery,
-                    iAttrs: angular.IAttributes,
-                    controllers: [Context.Controller, Controller]) {
-                    controllers[0].addProcedure(controllers[1]);
-                    $scope.$on("$destroy", function () { controllers[0].removeProcedure(controllers[1]); });
-                    if (controllers[1].run !== "manual") { controllers[0].execute(controllers[1].alias); }
-                    if (controllers[1].run === "auto") {
-                        $scope.$watchCollection(function () { return controllers[1].parameters; },
-                            function (newValue: any, oldValue: any) {
-                                if (newValue !== oldValue) { controllers[0].execute(controllers[1].alias); }
-                            });
+                link: {
+                    pre: function (
+                        $scope: IScope,
+                        iElement: angular.IAugmentedJQuery,
+                        iAttrs: angular.IAttributes,
+                        controllers: [Context.Controller, Controller]) {
+                        controllers[0].addProcedure(controllers[1]);
+                        $scope.$on("$destroy", function () { controllers[0].removeProcedure(controllers[1]); });
+                    },
+                    post: function (
+                        $scope: IScope,
+                        iElement: angular.IAugmentedJQuery,
+                        iAttrs: angular.IAttributes,
+                        controllers: [Context.Controller, Controller]) {
+                        if (controllers[1].run !== "manual") { controllers[0].execute(controllers[1].alias); }
+                        if (controllers[1].run === "auto") {
+                            $scope.$watchCollection(function () { return controllers[1].parameters; },
+                                function (newValue: any, oldValue: any) {
+                                    if (newValue !== oldValue) { controllers[0].execute(controllers[1].alias); }
+                                });
+                        }
                     }
                 }
             };
@@ -188,18 +196,26 @@ module OUX {
                 scope: <IScope> { name: "@", type: "@", value: "@", format: "@", required: "@" },
                 controller: Controller,
                 require: ["^^oux", "^^ouxProcedure", "ouxParameter"],
-                link: function (
-                    $scope: IScope,
-                    iElement: angular.IAugmentedJQuery,
-                    iAttrs: angular.IAttributes,
-                    controllers: [Context.Controller, Procedure.Controller, Controller]) {
-                    controllers[1].addParameter(controllers[2]);
-                    $scope.$on("$destroy", function () { controllers[1].removeParameter(controllers[2]); });
-                    if (controllers[1].run === "auto") {
-                        $scope.$watch(function () { return controllers[0].parameterValue(controllers[2]); },
-                            function (newValue: any, oldValue: any) {
-                                if (newValue !== oldValue) { controllers[0].execute(controllers[1].alias); }
-                            });
+                link: {
+                    pre: function (
+                        $scope: IScope,
+                        iElement: angular.IAugmentedJQuery,
+                        iAttrs: angular.IAttributes,
+                        controllers: [Context.Controller, Procedure.Controller, Controller]) {
+                        controllers[1].addParameter(controllers[2]);
+                        $scope.$on("$destroy", function () { controllers[1].removeParameter(controllers[2]); });
+                    },
+                    post: function (
+                        $scope: IScope,
+                        iElement: angular.IAugmentedJQuery,
+                        iAttrs: angular.IAttributes,
+                        controllers: [Context.Controller, Procedure.Controller, Controller]) {
+                        if (controllers[1].run === "auto") {
+                            $scope.$watch(function () { return controllers[0].parameterValue(controllers[2]); },
+                                function (newValue: any, oldValue: any) {
+                                    if (newValue !== oldValue) { controllers[0].execute(controllers[1].alias); }
+                                });
+                        }
                     }
                 }
             };
@@ -241,34 +257,42 @@ module OUX {
                     controller: Controller,
                     controllerAs: "ouxForm",
                     require: ["^^oux", "ouxForm"],
-                    link: function (
-                        $scope: IScope,
-                        iElement: angular.IAugmentedJQuery,
-                        iAttrs: angular.IAttributes,
-                        controllers: [Context.Controller, Controller]) {
-                        function checkProcedureExists(namingExpression: string) {
-                            var s: string[] = namingExpression.split(" as ", 2),
-                                name: string = s[0], alias: string = (s.length > 1) ? s[1] : s[0];
-                            if (angular.isUndefined(controllers[0].procedures[alias])) {
-                                controllers[0].addProcedure(<Procedure.Controller>
-                                    $injector.instantiate(Procedure.Controller, {
-                                        $scope: angular.extend($scope.$new(true),
-                                            { name: name, alias: alias, routeParams: "true" })
-                                    }));
+                    link: {
+                        pre: function (
+                            $scope: IScope,
+                            iElement: angular.IAugmentedJQuery,
+                            iAttrs: angular.IAttributes,
+                            controllers: [Context.Controller, Controller]) {
+                            function checkProcedureExists(namingExpression: string) {
+                                var s: string[] = namingExpression.split(" as ", 2),
+                                    name: string = s[0], alias: string = (s.length > 1) ? s[1] : s[0];
+                                if (angular.isUndefined(controllers[0].procedures[alias])) {
+                                    controllers[0].addProcedure(<Procedure.Controller>
+                                        $injector.instantiate(Procedure.Controller, {
+                                            $scope: angular.extend($scope.$new(true),
+                                                { name: name, alias: alias, routeParams: "true" })
+                                        }));
+                                }
                             }
-                        }
-                        if (controllers[1].loadable) {
-                            checkProcedureExists($scope.load);
-                            controllers[1].load = function () { controllers[0].execute(controllers[1].loadProcAlias); };
+                            if (controllers[1].loadable) {
+                                checkProcedureExists($scope.load);
+                                controllers[1].load = function () { controllers[0].execute(controllers[1].loadProcAlias); };
+                            }
+                            if (controllers[1].editable) {
+                                checkProcedureExists($scope.save);
+                                controllers[1].save = function () { controllers[0].execute(controllers[1].saveProcAlias); };
+                            }
+                            if (controllers[1].deletable) {
+                                checkProcedureExists($scope.delete);
+                                controllers[1].delete = function () { controllers[0].execute(controllers[1].deleteProcAlias); };
+                            }
+                        },
+                        post: function (
+                            $scope: IScope,
+                            iElement: angular.IAugmentedJQuery,
+                            iAttrs: angular.IAttributes,
+                            controllers: [Context.Controller, Controller]) {
                             controllers[1].load();
-                        }
-                        if (controllers[1].editable) {
-                            checkProcedureExists($scope.save);
-                            controllers[1].save = function () { controllers[0].execute(controllers[1].saveProcAlias); };
-                        }
-                        if (controllers[1].deletable) {
-                            checkProcedureExists($scope.delete);
-                            controllers[1].delete = function () { controllers[0].execute(controllers[1].deleteProcAlias); };
                         }
                     }
                 };
@@ -280,7 +304,8 @@ module OUX {
     export module Input {
         export interface IScope extends angular.IScope {
             label: string;
-            ngModel: angular.INgModelController;
+            ngModel: string;
+            format: string;
             required: string;
             form: angular.IFormController
         }
@@ -288,19 +313,136 @@ module OUX {
             static $inject: string[] = ["$scope"];
             constructor(private $scope: IScope) { }
             get label(): string { return this.$scope.label; }
-            get model(): angular.INgModelController { return this.$scope.ngModel; }
-            set model(value: angular.INgModelController) { this.$scope.ngModel = value; }
+            get model(): string { return this.$scope.ngModel; }
+            set model(value: string) { this.$scope.ngModel = value; }
+            get format(): string { return Option(this.$scope.format); }
+            get inputType(): string {
+                switch (this.format) {
+                    case "email": return "email";
+                    case "url": return "url";
+                    default: return "text";
+                }
+            }
+            get hasAddons(): boolean {
+                switch (this.format) {
+                    case "email": case "url": return true;
+                    default: return false;
+                }
+            }
             get required(): boolean { return Option(this.$scope.required) === "true"; }
-            get invalid(): boolean { return this.$scope.form.$invalid; }
         }
         export function Directive(): angular.IDirective {
             return {
                 restrict: "E",
                 templateUrl: "ouxInput.html",
-                scope: { label: "@", ngModel: "=", required: "@" },
+                scope: <IScope> { label: "@", ngModel: "=", format: "@", required: "@" },
                 controller: Controller,
-                controllerAs: "ouxInput"
+                controllerAs: "ouxInput",
+                require: ["^^ouxForm", "ouxInput"],
+                link: function (
+                    $scope: IScope,
+                    iElement: angular.IAugmentedJQuery,
+                    iAttrs: angular.IAttributes,
+                    controllers: [Form.Controller, Controller]) {
+                    Object.defineProperty(controllers[1], "invalid", {
+                        get: function () { return controllers[0].dirty && $scope.form.$invalid; }
+                    });
+                }
             };
+        }
+    }
+    export module Save {
+        export interface IAttributes extends angular.IAttributes { ouxSave: string; ngModel: string; required: string; }
+        export function Directive(): angular.IDirective {
+            return {
+                restrict: "A",
+                require: ["^^oux", "^^ouxForm", "ngModel"],
+                link: function (
+                    $scope: angular.IScope,
+                    iElement: angular.IAugmentedJQuery,
+                    iAttrs: IAttributes,
+                    controllers: [OUX.Context.Controller, OUX.Form.Controller, angular.INgModelController]) {
+                    var procedure: Procedure.Controller = controllers[0].procedures[controllers[1].saveProcAlias],
+                        parameterName: string = IfBlank(iAttrs.ouxSave, String(iAttrs.ngModel).split(".").pop()),
+                        parameterScope: Parameter.IScope = <Parameter.IScope> angular.extend($scope.$new(), {
+                            name: parameterName,
+                            type: "value",
+                            required: String(angular.isDefined(iAttrs.required))
+                        });
+                    Object.defineProperty(parameterScope, "value", { get: function () { return controllers[2].$modelValue; } });
+                    var parameter: Parameter.Controller = new Parameter.Controller(parameterScope);
+                    procedure.addParameter(parameter);
+                    $scope.$on("$destroy", function () { procedure.removeParameter(parameter); });
+                }
+            };
+        }
+    }
+    export module Format {
+        export interface IAttributes extends angular.IAttributes { ouxFormat: string; placeholder: string; }
+        export function DirectiveFactory(): angular.IDirectiveFactory {
+            var factory = function (
+                $locale: angular.ILocaleService,
+                $filter: angular.IFilterService): angular.IDirective {
+                return {
+                    restrict: "A",
+                    require: "ngModel",
+                    link: function (
+                        $scope: angular.IScope,
+                        iElement: angular.IAugmentedJQuery,
+                        iAttrs: IAttributes,
+                        controller: angular.INgModelController) {
+                        var format: string = Option(iAttrs.ouxFormat);
+                        switch (format) {
+                            case "email":
+                                if (IsBlank(iAttrs.placeholder)) { iAttrs.$set("placeholder", "somebody@somewhere.com"); }
+                                break;
+                            case "url":
+                                if (IsBlank(iAttrs.placeholder)) { iAttrs.$set("placeholder", "http://www.domain.com"); }
+                                break;
+                            case "integer":
+                                if (IsBlank(iAttrs.placeholder)) {
+                                    iAttrs.$set("placeholder", $filter("number")(9999, 0)
+                                        .replace(new RegExp("9", "g"), "#"));
+                                }
+                                controller.$formatters.push(function ($modelValue: any) {
+                                    if (isNaN(Number(String($modelValue)))) { return undefined; }
+                                    return $filter("number")(parseInt(String($modelValue), 10), 0);
+                                });
+                                controller.$parsers.push(function ($viewValue: string) {
+                                    if (IsBlank($viewValue)) { return undefined; }
+                                    var value: string = $viewValue.replace(new RegExp($locale.NUMBER_FORMATS.GROUP_SEP, "g"), "");
+                                    if (isNaN(Number(value))) { return undefined; }
+                                    return parseInt(value, 10);
+                                });
+                                break;
+                            case "decimal":
+                                if (IsBlank(iAttrs.placeholder)) {
+                                    iAttrs.$set("placeholder", $filter("number")(9999.99, 2)
+                                        .replace(new RegExp("9", "g"), "#"));
+                                }
+                                controller.$formatters.push(function ($modelValue: any) {
+                                    if (isNaN(Number(String($modelValue)))) { return undefined; }
+                                    return $filter("number")(parseFloat(String($modelValue)), 2);
+                                });
+                                controller.$parsers.push(function ($viewValue: string) {
+                                    if (IsBlank($viewValue)) { return undefined; }
+                                    var segments: string[] = $viewValue.trim().split($locale.NUMBER_FORMATS.DECIMAL_SEP);
+                                    if (segments.length > 2) { return undefined; }
+                                    segments[0] = segments[0].replace(new RegExp($locale.NUMBER_FORMATS.GROUP_SEP, "g"), "");
+                                    if (segments.length === 2) { segments[1] = segments[1].replace(new RegExp(" ", "g"), "#"); }
+                                    if (isNaN(Number(segments[0])) || isNaN(Number(segments[1] || 0))) { return undefined; }
+                                    return parseFloat(segments.join("."));
+                                });
+                                break;
+                            default:
+                                controller.$parsers.push(function ($viewValue: string) { return IfBlank($viewValue); });
+                                break;
+                        }
+                    }
+                };
+            };
+            factory.$inject = ["$locale", "$filter"];
+            return factory;
         }
     }
 }
@@ -328,6 +470,8 @@ define(["moment", "angular", "angular-locale", "angular-route", "angular-ui-boot
     oux.directive("ouxParameter", OUX.Parameter.Directive);
     oux.directive("ouxForm", OUX.Form.DirectiveFactory());
     oux.directive("ouxInput", OUX.Input.Directive);
+    oux.directive("ouxSave", OUX.Save.Directive);
+    oux.directive("ouxFormat", OUX.Format.DirectiveFactory());
 
     return oux;
 

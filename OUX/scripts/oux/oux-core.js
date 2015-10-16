@@ -216,18 +216,22 @@ var OUX;
                 scope: { name: "@", alias: "@", run: "@", routeParams: "@" },
                 controller: Controller,
                 require: ["^^oux", "ouxProcedure"],
-                link: function ($scope, iElement, iAttrs, controllers) {
-                    controllers[0].addProcedure(controllers[1]);
-                    $scope.$on("$destroy", function () { controllers[0].removeProcedure(controllers[1]); });
-                    if (controllers[1].run !== "manual") {
-                        controllers[0].execute(controllers[1].alias);
-                    }
-                    if (controllers[1].run === "auto") {
-                        $scope.$watchCollection(function () { return controllers[1].parameters; }, function (newValue, oldValue) {
-                            if (newValue !== oldValue) {
-                                controllers[0].execute(controllers[1].alias);
-                            }
-                        });
+                link: {
+                    pre: function ($scope, iElement, iAttrs, controllers) {
+                        controllers[0].addProcedure(controllers[1]);
+                        $scope.$on("$destroy", function () { controllers[0].removeProcedure(controllers[1]); });
+                    },
+                    post: function ($scope, iElement, iAttrs, controllers) {
+                        if (controllers[1].run !== "manual") {
+                            controllers[0].execute(controllers[1].alias);
+                        }
+                        if (controllers[1].run === "auto") {
+                            $scope.$watchCollection(function () { return controllers[1].parameters; }, function (newValue, oldValue) {
+                                if (newValue !== oldValue) {
+                                    controllers[0].execute(controllers[1].alias);
+                                }
+                            });
+                        }
                     }
                 }
             };
@@ -275,15 +279,19 @@ var OUX;
                 scope: { name: "@", type: "@", value: "@", format: "@", required: "@" },
                 controller: Controller,
                 require: ["^^oux", "^^ouxProcedure", "ouxParameter"],
-                link: function ($scope, iElement, iAttrs, controllers) {
-                    controllers[1].addParameter(controllers[2]);
-                    $scope.$on("$destroy", function () { controllers[1].removeParameter(controllers[2]); });
-                    if (controllers[1].run === "auto") {
-                        $scope.$watch(function () { return controllers[0].parameterValue(controllers[2]); }, function (newValue, oldValue) {
-                            if (newValue !== oldValue) {
-                                controllers[0].execute(controllers[1].alias);
-                            }
-                        });
+                link: {
+                    pre: function ($scope, iElement, iAttrs, controllers) {
+                        controllers[1].addParameter(controllers[2]);
+                        $scope.$on("$destroy", function () { controllers[1].removeParameter(controllers[2]); });
+                    },
+                    post: function ($scope, iElement, iAttrs, controllers) {
+                        if (controllers[1].run === "auto") {
+                            $scope.$watch(function () { return controllers[0].parameterValue(controllers[2]); }, function (newValue, oldValue) {
+                                if (newValue !== oldValue) {
+                                    controllers[0].execute(controllers[1].alias);
+                                }
+                            });
+                        }
                     }
                 }
             };
@@ -376,27 +384,31 @@ var OUX;
                     controller: Controller,
                     controllerAs: "ouxForm",
                     require: ["^^oux", "ouxForm"],
-                    link: function ($scope, iElement, iAttrs, controllers) {
-                        function checkProcedureExists(namingExpression) {
-                            var s = namingExpression.split(" as ", 2), name = s[0], alias = (s.length > 1) ? s[1] : s[0];
-                            if (angular.isUndefined(controllers[0].procedures[alias])) {
-                                controllers[0].addProcedure($injector.instantiate(Procedure.Controller, {
-                                    $scope: angular.extend($scope.$new(true), { name: name, alias: alias, routeParams: "true" })
-                                }));
+                    link: {
+                        pre: function ($scope, iElement, iAttrs, controllers) {
+                            function checkProcedureExists(namingExpression) {
+                                var s = namingExpression.split(" as ", 2), name = s[0], alias = (s.length > 1) ? s[1] : s[0];
+                                if (angular.isUndefined(controllers[0].procedures[alias])) {
+                                    controllers[0].addProcedure($injector.instantiate(Procedure.Controller, {
+                                        $scope: angular.extend($scope.$new(true), { name: name, alias: alias, routeParams: "true" })
+                                    }));
+                                }
                             }
-                        }
-                        if (controllers[1].loadable) {
-                            checkProcedureExists($scope.load);
-                            controllers[1].load = function () { controllers[0].execute(controllers[1].loadProcAlias); };
+                            if (controllers[1].loadable) {
+                                checkProcedureExists($scope.load);
+                                controllers[1].load = function () { controllers[0].execute(controllers[1].loadProcAlias); };
+                            }
+                            if (controllers[1].editable) {
+                                checkProcedureExists($scope.save);
+                                controllers[1].save = function () { controllers[0].execute(controllers[1].saveProcAlias); };
+                            }
+                            if (controllers[1].deletable) {
+                                checkProcedureExists($scope.delete);
+                                controllers[1].delete = function () { controllers[0].execute(controllers[1].deleteProcAlias); };
+                            }
+                        },
+                        post: function ($scope, iElement, iAttrs, controllers) {
                             controllers[1].load();
-                        }
-                        if (controllers[1].editable) {
-                            checkProcedureExists($scope.save);
-                            controllers[1].save = function () { controllers[0].execute(controllers[1].saveProcAlias); };
-                        }
-                        if (controllers[1].deletable) {
-                            checkProcedureExists($scope.delete);
-                            controllers[1].delete = function () { controllers[0].execute(controllers[1].deleteProcAlias); };
                         }
                     }
                 };
@@ -423,13 +435,35 @@ var OUX;
                 enumerable: true,
                 configurable: true
             });
-            Object.defineProperty(Controller.prototype, "required", {
-                get: function () { return Option(this.$scope.required) === "true"; },
+            Object.defineProperty(Controller.prototype, "format", {
+                get: function () { return Option(this.$scope.format); },
                 enumerable: true,
                 configurable: true
             });
-            Object.defineProperty(Controller.prototype, "invalid", {
-                get: function () { return this.$scope.form.$invalid; },
+            Object.defineProperty(Controller.prototype, "inputType", {
+                get: function () {
+                    switch (this.format) {
+                        case "email": return "email";
+                        case "url": return "url";
+                        default: return "text";
+                    }
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Controller.prototype, "hasAddons", {
+                get: function () {
+                    switch (this.format) {
+                        case "email":
+                        case "url": return true;
+                        default: return false;
+                    }
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Controller.prototype, "required", {
+                get: function () { return Option(this.$scope.required) === "true"; },
                 enumerable: true,
                 configurable: true
             });
@@ -441,13 +475,123 @@ var OUX;
             return {
                 restrict: "E",
                 templateUrl: "ouxInput.html",
-                scope: { label: "@", ngModel: "=", required: "@" },
+                scope: { label: "@", ngModel: "=", format: "@", required: "@" },
                 controller: Controller,
-                controllerAs: "ouxInput"
+                controllerAs: "ouxInput",
+                require: ["^^ouxForm", "ouxInput"],
+                link: function ($scope, iElement, iAttrs, controllers) {
+                    Object.defineProperty(controllers[1], "invalid", {
+                        get: function () { return controllers[0].dirty && $scope.form.$invalid; }
+                    });
+                }
             };
         }
         Input.Directive = Directive;
     })(Input = OUX.Input || (OUX.Input = {}));
+    var Save;
+    (function (Save) {
+        function Directive() {
+            return {
+                restrict: "A",
+                require: ["^^oux", "^^ouxForm", "ngModel"],
+                link: function ($scope, iElement, iAttrs, controllers) {
+                    var procedure = controllers[0].procedures[controllers[1].saveProcAlias], parameterName = IfBlank(iAttrs.ouxSave, String(iAttrs.ngModel).split(".").pop()), parameterScope = angular.extend($scope.$new(), {
+                        name: parameterName,
+                        type: "value",
+                        required: String(angular.isDefined(iAttrs.required))
+                    });
+                    Object.defineProperty(parameterScope, "value", { get: function () { return controllers[2].$modelValue; } });
+                    var parameter = new Parameter.Controller(parameterScope);
+                    procedure.addParameter(parameter);
+                    $scope.$on("$destroy", function () { procedure.removeParameter(parameter); });
+                }
+            };
+        }
+        Save.Directive = Directive;
+    })(Save = OUX.Save || (OUX.Save = {}));
+    var Format;
+    (function (Format) {
+        function DirectiveFactory() {
+            var factory = function ($locale, $filter) {
+                return {
+                    restrict: "A",
+                    require: "ngModel",
+                    link: function ($scope, iElement, iAttrs, controller) {
+                        var format = Option(iAttrs.ouxFormat);
+                        switch (format) {
+                            case "email":
+                                if (IsBlank(iAttrs.placeholder)) {
+                                    iAttrs.$set("placeholder", "somebody@somewhere.com");
+                                }
+                                break;
+                            case "url":
+                                if (IsBlank(iAttrs.placeholder)) {
+                                    iAttrs.$set("placeholder", "http://www.domain.com");
+                                }
+                                break;
+                            case "integer":
+                                if (IsBlank(iAttrs.placeholder)) {
+                                    iAttrs.$set("placeholder", $filter("number")(9999, 0)
+                                        .replace(new RegExp("9", "g"), "#"));
+                                }
+                                controller.$formatters.push(function ($modelValue) {
+                                    if (isNaN(Number(String($modelValue)))) {
+                                        return undefined;
+                                    }
+                                    return $filter("number")(parseInt(String($modelValue), 10), 0);
+                                });
+                                controller.$parsers.push(function ($viewValue) {
+                                    if (IsBlank($viewValue)) {
+                                        return undefined;
+                                    }
+                                    var value = $viewValue.replace(new RegExp($locale.NUMBER_FORMATS.GROUP_SEP, "g"), "");
+                                    if (isNaN(Number(value))) {
+                                        return undefined;
+                                    }
+                                    return parseInt(value, 10);
+                                });
+                                break;
+                            case "decimal":
+                                if (IsBlank(iAttrs.placeholder)) {
+                                    iAttrs.$set("placeholder", $filter("number")(9999.99, 2)
+                                        .replace(new RegExp("9", "g"), "#"));
+                                }
+                                controller.$formatters.push(function ($modelValue) {
+                                    if (isNaN(Number(String($modelValue)))) {
+                                        return undefined;
+                                    }
+                                    return $filter("number")(parseFloat(String($modelValue)), 2);
+                                });
+                                controller.$parsers.push(function ($viewValue) {
+                                    if (IsBlank($viewValue)) {
+                                        return undefined;
+                                    }
+                                    var segments = $viewValue.trim().split($locale.NUMBER_FORMATS.DECIMAL_SEP);
+                                    if (segments.length > 2) {
+                                        return undefined;
+                                    }
+                                    segments[0] = segments[0].replace(new RegExp($locale.NUMBER_FORMATS.GROUP_SEP, "g"), "");
+                                    if (segments.length === 2) {
+                                        segments[1] = segments[1].replace(new RegExp(" ", "g"), "#");
+                                    }
+                                    if (isNaN(Number(segments[0])) || isNaN(Number(segments[1] || 0))) {
+                                        return undefined;
+                                    }
+                                    return parseFloat(segments.join("."));
+                                });
+                                break;
+                            default:
+                                controller.$parsers.push(function ($viewValue) { return IfBlank($viewValue); });
+                                break;
+                        }
+                    }
+                };
+            };
+            factory.$inject = ["$locale", "$filter"];
+            return factory;
+        }
+        Format.DirectiveFactory = DirectiveFactory;
+    })(Format = OUX.Format || (OUX.Format = {}));
 })(OUX || (OUX = {}));
 define(["moment", "angular", "angular-locale", "angular-route", "angular-ui-bootstrap"], function (moment, angular) {
     var oux = angular.module("oux", ["ngRoute", "ui.bootstrap"]);
@@ -466,6 +610,8 @@ define(["moment", "angular", "angular-locale", "angular-route", "angular-ui-boot
     oux.directive("ouxParameter", OUX.Parameter.Directive);
     oux.directive("ouxForm", OUX.Form.DirectiveFactory());
     oux.directive("ouxInput", OUX.Input.Directive);
+    oux.directive("ouxSave", OUX.Save.Directive);
+    oux.directive("ouxFormat", OUX.Format.DirectiveFactory());
     return oux;
 });
 //# sourceMappingURL=oux-core.js.map
