@@ -35,7 +35,7 @@ define(["oux-core"], function (oux: angular.IModule) {
             "<label class=\"control-label col-sm-3\">{{ouxInput.label}}</label>" +
             "<div class=\"col-sm-9\"><div ng-class=\"{'input-group': ouxInput.hasAddons}\">" +
             "<input type=\"{{ouxInput.inputType}}\" class=\"form-control\" ng-model=\"ouxInput.model\" ng-required=\"ouxInput.required\" " +
-            "oux-format=\"{{ouxInput.format}}\" />" +
+            "ng-attr-oux-format=\"{{ouxInput.format}}\" ng-attr-oux-save=\"{{ouxInput.save}}\" />" +
             "<span class=\"input-group-btn\" ng-if=\"ouxInput.format === 'email'\">" +
             "<a class=\"btn btn-default\" ng-href=\"mailto:{{ouxInput.model}}\" ng-disabled=\"ouxInput.invalid\" title=\"Send Email\">" +
             "<i class=\"fa fa-envelope-o\"></i></a></span>" +

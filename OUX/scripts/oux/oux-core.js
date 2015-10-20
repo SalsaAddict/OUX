@@ -475,14 +475,21 @@ var OUX;
             return {
                 restrict: "E",
                 templateUrl: "ouxInput.html",
-                scope: { label: "@", ngModel: "=", format: "@", required: "@" },
+                scope: { label: "@", ngModel: "=", format: "@", required: "@", save: "@" },
                 controller: Controller,
                 controllerAs: "ouxInput",
                 require: ["^^ouxForm", "ouxInput"],
-                link: function ($scope, iElement, iAttrs, controllers) {
-                    Object.defineProperty(controllers[1], "invalid", {
-                        get: function () { return controllers[0].dirty && $scope.form.$invalid; }
-                    });
+                link: {
+                    pre: function ($scope, iElement, iAttrs, controllers) {
+                        Object.defineProperty(controllers[1], "invalid", {
+                            get: function () { return controllers[0].dirty && $scope.form.$invalid; }
+                        });
+                        if (angular.isDefined(iAttrs.save)) {
+                            Object.defineProperty(controllers[1], "save", {
+                                get: function () { return IfBlank(iAttrs.save, iAttrs.ngModel.split(".").pop()); }
+                            });
+                        }
+                    }
                 }
             };
         }
@@ -494,16 +501,18 @@ var OUX;
             return {
                 restrict: "A",
                 require: ["^^oux", "^^ouxForm", "ngModel"],
-                link: function ($scope, iElement, iAttrs, controllers) {
-                    var procedure = controllers[0].procedures[controllers[1].saveProcAlias], parameterName = IfBlank(iAttrs.ouxSave, String(iAttrs.ngModel).split(".").pop()), parameterScope = angular.extend($scope.$new(), {
-                        name: parameterName,
-                        type: "value",
-                        required: String(angular.isDefined(iAttrs.required))
-                    });
-                    Object.defineProperty(parameterScope, "value", { get: function () { return controllers[2].$modelValue; } });
-                    var parameter = new Parameter.Controller(parameterScope);
-                    procedure.addParameter(parameter);
-                    $scope.$on("$destroy", function () { procedure.removeParameter(parameter); });
+                link: {
+                    pre: function ($scope, iElement, iAttrs, controllers) {
+                        var procedure = controllers[0].procedures[controllers[1].saveProcAlias], parameterName = IfBlank(iAttrs.ouxSave, String(iAttrs.ngModel).split(".").pop()), parameterScope = angular.extend($scope.$new(), {
+                            name: parameterName,
+                            type: "value",
+                            required: String(angular.isDefined(iAttrs.required))
+                        });
+                        Object.defineProperty(parameterScope, "value", { get: function () { return controllers[2].$modelValue; } });
+                        var parameter = new Parameter.Controller(parameterScope);
+                        procedure.addParameter(parameter);
+                        $scope.$on("$destroy", function () { procedure.removeParameter(parameter); });
+                    }
                 }
             };
         }
@@ -519,16 +528,6 @@ var OUX;
                     link: function ($scope, iElement, iAttrs, controller) {
                         var format = Option(iAttrs.ouxFormat);
                         switch (format) {
-                            case "email":
-                                if (IsBlank(iAttrs.placeholder)) {
-                                    iAttrs.$set("placeholder", "somebody@somewhere.com");
-                                }
-                                break;
-                            case "url":
-                                if (IsBlank(iAttrs.placeholder)) {
-                                    iAttrs.$set("placeholder", "http://www.domain.com");
-                                }
-                                break;
                             case "integer":
                                 if (IsBlank(iAttrs.placeholder)) {
                                     iAttrs.$set("placeholder", $filter("number")(9999, 0)
@@ -581,6 +580,19 @@ var OUX;
                                 });
                                 break;
                             default:
+                                switch (format) {
+                                    case "email":
+                                        if (IsBlank(iAttrs.placeholder)) {
+                                            iAttrs.$set("placeholder", "somebody@somewhere.com");
+                                        }
+                                        break;
+                                    case "url":
+                                        if (IsBlank(iAttrs.placeholder)) {
+                                            iAttrs.$set("placeholder", "http://www.somewhere.com");
+                                        }
+                                        break;
+                                }
+                                controller.$formatters.push(function ($modelValue) { return IfBlank($modelValue); });
                                 controller.$parsers.push(function ($viewValue) { return IfBlank($viewValue); });
                                 break;
                         }
