@@ -2,7 +2,7 @@
 /// <reference path="../typings/angularjs/angular.d.ts" />
 define(["oux-core"], function (oux) {
     oux.run(["$templateCache", "$log", function ($templateCache, $log) {
-            $templateCache.put("ouxForm.html", "<form name=\"form\" class=\"form-horizontal\" novalidate>" +
+            $templateCache.put("ouxForm.html", "<form name=\"form\" class=\"form-horizontal\">" +
                 "<div class=\"panel panel-default form-horizontal oux-form\">" +
                 "<div class=\"panel-heading\"><h4><b>{{ouxForm.heading}}</b>" +
                 "<span ng-show=\"ouxForm.dirty && ouxForm.invalid\"> <i class=\"fa fa-exclamation-triangle text-danger\"></i></span>" +

@@ -462,11 +462,6 @@ var OUX;
                 enumerable: true,
                 configurable: true
             });
-            Object.defineProperty(Controller.prototype, "required", {
-                get: function () { return Option(this.$scope.required) === "true"; },
-                enumerable: true,
-                configurable: true
-            });
             Controller.$inject = ["$scope"];
             return Controller;
         })();
@@ -481,6 +476,14 @@ var OUX;
                 require: ["^^ouxForm", "ouxInput"],
                 link: {
                     pre: function ($scope, iElement, iAttrs, controllers) {
+                        Object.defineProperty(controllers[1], "required", {
+                            get: function () {
+                                if (angular.isUndefined(iAttrs.required)) {
+                                    return false;
+                                }
+                                return Option(iAttrs.required, "true") === "true";
+                            }
+                        });
                         Object.defineProperty(controllers[1], "invalid", {
                             get: function () { return controllers[0].dirty && $scope.form.$invalid; }
                         });

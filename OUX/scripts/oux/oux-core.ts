@@ -330,9 +330,8 @@ module OUX {
                     default: return false;
                 }
             }
-            get required(): boolean { return Option(this.$scope.required) === "true"; }
         }
-        export interface IAttributes extends angular.IAttributes { save: string; ngModel: string; }
+        export interface IAttributes extends angular.IAttributes { ngModel: string; save: string; required: string; }
         export function Directive(): angular.IDirective {
             return {
                 restrict: "E",
@@ -347,6 +346,12 @@ module OUX {
                         iElement: angular.IAugmentedJQuery,
                         iAttrs: IAttributes,
                         controllers: [Form.Controller, Controller]) {
+                        Object.defineProperty(controllers[1], "required", {
+                            get: function () {
+                                if (angular.isUndefined(iAttrs.required)) { return false; }
+                                return Option(iAttrs.required, "true") === "true";
+                            }
+                        });
                         Object.defineProperty(controllers[1], "invalid", {
                             get: function () { return controllers[0].dirty && $scope.form.$invalid; }
                         });
