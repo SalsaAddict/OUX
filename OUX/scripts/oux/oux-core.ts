@@ -5,6 +5,8 @@
 /// <reference path="../typings/moment/moment.d.ts" />
 "use strict";
 
+var moment: moment.MomentStatic = require("moment");
+
 module OUX {
     "use strict";
     export function IsBlank(expression: any): boolean {
@@ -29,6 +31,54 @@ module OUX {
             if (!found) { option = undefined; }
         }
         return IfBlank(option, angular.lowercase(defaultValue).trim());
+    }
+    export module Locale {
+        export class Service {
+            static $inject: string[] = ["$window"];
+            constructor(private $window: angular.IWindowService) { }
+            get localeId(): string { return IfBlank(this.$window.localStorage.getItem("localeId"), "gb"); }
+            get dateFormat(): { angular: string; moment: string; } {
+                switch (this.localeId) {
+                    case "us": return { angular: "MM/dd/yyyy", moment: "MM/DD/YYYY" };
+                    default: return { angular: "dd/MM/yyyy", moment: "DD/MM/YYYY" };
+                }
+            }
+            public formatDate = ($modelValue: any): String => {
+                var m: moment.Moment = moment(String($modelValue).trim().substr(0, 10), "YYYY-MM-DD");
+                if (!m.isValid()) { return; }
+                return m.format(this.dateFormat.moment);
+            }
+            public parseDate = ($viewValue: string): String => {
+                var m: moment.Moment = moment(String($viewValue).trim(), this.dateFormat.moment);
+                if (!m.isValid()) { return; }
+                return m.format("YYYY-MM-DD");
+            }
+            get numberFormat(): { groupSeparator: string; decimalSeparator: string; } {
+                switch (this.localeId) {
+                    case "eu": return { groupSeparator: "\u00a0", decimalSeparator: "," };
+                    default: return { groupSeparator: ",", decimalSeparator: "." };
+                }
+            }
+            public formatNumber = ($modelValue: any, dp: number = 2) => {
+                if (IsBlank($modelValue) || isNaN(Number($modelValue))) { return undefined; }
+                var split: string[] = String(Number($modelValue).toFixed(dp)).split(".", 2);
+                split[0] = split[0]
+                    .replace(/[^0-9-]/g, "")
+                    .replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,")
+                    .replace(/,/g, this.numberFormat.groupSeparator);
+                if (split[1]) { split[1] = split[1].replace(/[^0-9-]/g, ""); }
+                return split.join(this.numberFormat.decimalSeparator);
+            }
+            public parseNumber = ($viewValue: string, dp: number = 2) => {
+                if (IsBlank($viewValue)) { return undefined; }
+                var split: string[] = String($viewValue).split(this.numberFormat.decimalSeparator, 2);
+                split[0] = split[0].replace(new RegExp(this.numberFormat.groupSeparator, "g"), ",");
+                if (!/^((?:[+-])?(?:\d{1,3}(?:\,?\d{3})*))$/g.test(split[0])) { return undefined; }
+                if (/[^0-9]/g.test(split[1])) { return undefined; }
+                split[0] = split[0].replace(/,/g, "");
+                return Number(split.join(".")).toFixed(dp);
+            }
+        }
     }
     export module Convert {
         export interface IAttributes extends angular.IAttributes { ouxFormat: string; }
@@ -291,9 +341,7 @@ module OUX {
                             $scope: IScope,
                             iElement: angular.IAugmentedJQuery,
                             iAttrs: angular.IAttributes,
-                            controllers: [Context.Controller, Controller]) {
-                            controllers[1].load();
-                        }
+                            controllers: [Context.Controller, Controller]) { controllers[1].load(); }
                     }
                 };
             };
@@ -311,12 +359,22 @@ module OUX {
             form: angular.IFormController
         }
         export class Controller {
-            static $inject: string[] = ["$scope"];
-            constructor(private $scope: IScope) { }
+            static $inject: string[] = ["$scope", "$locale", "$filter"];
+            constructor(
+                private $scope: IScope,
+                private $locale: angular.ILocaleService,
+                private $filter: angular.IFilterService) { }
             get label(): string { return this.$scope.label; }
-            get model(): string { return this.$scope.ngModel; }
-            set model(value: string) { this.$scope.ngModel = value; }
             get format(): string { return Option(this.$scope.format); }
+            get datePickerFormat(): string {
+                if (this.format !== "date") { return undefined; }
+            }
+            get model(): any {
+                // if (IsBlank(this.$scope.ngModel)) { return undefined; }
+                // if (this.format === "date") { return moment(this.$scope.ngModel.trim().substr(0, 10), "YYYY-MM-DD").toDate(); }
+                return this.$scope.ngModel;
+            }
+            set model(value: any) { this.$scope.ngModel = value; }
             get inputType(): string {
                 switch (this.format) {
                     case "email": return "email";
@@ -324,12 +382,17 @@ module OUX {
                     default: return "text";
                 }
             }
+            get required(): boolean {
+                if (angular.isUndefined(this.$scope.required)) { return false; }
+                return Option(this.$scope.required, "true") !== "false";
+            }
             get hasAddons(): boolean {
                 switch (this.format) {
-                    case "email": case "url": return true;
+                    case "date": case "email": case "url": return true;
                     default: return false;
                 }
             }
+            public isOpen: boolean = false;
         }
         export interface IAttributes extends angular.IAttributes { ngModel: string; save: string; required: string; }
         export function Directive(): angular.IDirective {
@@ -346,12 +409,6 @@ module OUX {
                         iElement: angular.IAugmentedJQuery,
                         iAttrs: IAttributes,
                         controllers: [Form.Controller, Controller]) {
-                        Object.defineProperty(controllers[1], "required", {
-                            get: function () {
-                                if (angular.isUndefined(iAttrs.required)) { return false; }
-                                return Option(iAttrs.required, "true") === "true";
-                            }
-                        });
                         Object.defineProperty(controllers[1], "invalid", {
                             get: function () { return controllers[0].dirty && $scope.form.$invalid; }
                         });
@@ -397,7 +454,7 @@ module OUX {
         export interface IAttributes extends angular.IAttributes { ouxFormat: string; placeholder: string; }
         export function DirectiveFactory(): angular.IDirectiveFactory {
             var factory = function (
-                $locale: angular.ILocaleService,
+                ouxLocale: OUX.Locale.Service,
                 $filter: angular.IFilterService): angular.IDirective {
                 return {
                     restrict: "A",
@@ -409,20 +466,35 @@ module OUX {
                         controller: angular.INgModelController) {
                         var format: string = Option(iAttrs.ouxFormat);
                         switch (format) {
+                            case "date":
+                                if (IsBlank(iAttrs.placeholder)) {
+                                    iAttrs.$set("placeholder", angular.lowercase(ouxLocale.dateFormat.moment));
+                                }
+                                /*
+                                controller.$formatters.push(function ($modelValue: any) {
+                                    var date: moment.Moment = moment(String($modelValue).trim().substr(0, 10), "YYYY-MM-DD");
+                                    if (!date.isValid()) { return undefined; }
+                                    return date.format("L");
+                                });
+                                */
+                                controller.$parsers.push(function ($viewValue: string) {
+                                    return $viewValue;
+                                    var date: moment.Moment = moment($viewValue.trim(), moment.localeData().longDateFormat("L"));
+                                    if (!date.isValid()) { return undefined; }
+                                    if (date.format("L") !== $viewValue.trim()) { return undefined; }
+                                    return date.format("YYYY-MM-DD");
+                                });
+                                break;
                             case "integer":
                                 if (IsBlank(iAttrs.placeholder)) {
                                     iAttrs.$set("placeholder", $filter("number")(9999, 0)
                                         .replace(new RegExp("9", "g"), "#"));
                                 }
                                 controller.$formatters.push(function ($modelValue: any) {
-                                    if (isNaN(Number(String($modelValue)))) { return undefined; }
-                                    return $filter("number")(parseInt(String($modelValue), 10), 0);
+                                    return ouxLocale.formatNumber($modelValue, 0);
                                 });
                                 controller.$parsers.push(function ($viewValue: string) {
-                                    if (IsBlank($viewValue)) { return undefined; }
-                                    var value: string = $viewValue.replace(new RegExp($locale.NUMBER_FORMATS.GROUP_SEP, "g"), "");
-                                    if (isNaN(Number(value))) { return undefined; }
-                                    return parseInt(value, 10);
+                                    return ouxLocale.parseNumber($viewValue, 0);
                                 });
                                 break;
                             case "decimal":
@@ -431,17 +503,10 @@ module OUX {
                                         .replace(new RegExp("9", "g"), "#"));
                                 }
                                 controller.$formatters.push(function ($modelValue: any) {
-                                    if (isNaN(Number(String($modelValue)))) { return undefined; }
-                                    return $filter("number")(parseFloat(String($modelValue)), 2);
+                                    return ouxLocale.formatNumber($modelValue, 2);
                                 });
                                 controller.$parsers.push(function ($viewValue: string) {
-                                    if (IsBlank($viewValue)) { return undefined; }
-                                    var segments: string[] = $viewValue.trim().split($locale.NUMBER_FORMATS.DECIMAL_SEP);
-                                    if (segments.length > 2) { return undefined; }
-                                    segments[0] = segments[0].replace(new RegExp($locale.NUMBER_FORMATS.GROUP_SEP, "g"), "");
-                                    if (segments.length === 2) { segments[1] = segments[1].replace(new RegExp(" ", "g"), "#"); }
-                                    if (isNaN(Number(segments[0])) || isNaN(Number(segments[1] || 0))) { return undefined; }
-                                    return parseFloat(segments.join("."));
+                                    return ouxLocale.parseNumber($viewValue, 2);
                                 });
                                 break;
                             default:
@@ -460,38 +525,36 @@ module OUX {
                     }
                 };
             };
-            factory.$inject = ["$locale", "$filter"];
+            factory.$inject = ["ouxLocale", "$filter"];
             return factory;
         }
     }
 }
 
-define(["moment", "angular", "angular-locale", "angular-route", "angular-ui-bootstrap"], function (
-    moment: moment.MomentStatic, angular: angular.IAngularStatic) {
+var oux: angular.IModule = angular.module("oux", ["ngRoute", "ui.bootstrap"]);
 
-    var oux: angular.IModule = angular.module("oux", ["ngRoute", "ui.bootstrap"]);
+oux.service("ouxLocale", OUX.Locale.Service);
 
-    oux.run(["$locale", "$log", function (
-        $locale: angular.ILocaleService,
-        $log: angular.ILogService) {
-        moment.locale($locale.id);
-        $log.info({
-            locale: $locale.id,
-            dateFormat: moment.localeData().longDateFormat("L"),
-            currencySymbol: $locale.NUMBER_FORMATS.CURRENCY_SYM,
-            decimalSeparator: $locale.NUMBER_FORMATS.DECIMAL_SEP,
-            groupSeparator: $locale.NUMBER_FORMATS.GROUP_SEP
-        });
-    }]);
+oux.run(["$locale", "$log", "ouxLocale", function (
+    $locale: angular.ILocaleService,
+    $log: angular.ILogService,
+    ouxLocale: OUX.Locale.Service) {
+    moment.locale($locale.id);
+    $log.info({
+        locale: $locale.id,
+        dateFormat: moment.localeData().longDateFormat("L"),
+        currencySymbol: $locale.NUMBER_FORMATS.CURRENCY_SYM,
+        decimalSeparator: $locale.NUMBER_FORMATS.DECIMAL_SEP,
+        groupSeparator: $locale.NUMBER_FORMATS.GROUP_SEP,
+        ouxLocale: angular.toJson(ouxLocale.dateFormat)
+    });
+    $log.debug(ouxLocale.formatNumber("-123456789.855"));
+}]);
 
-    oux.directive("oux", OUX.Context.DirectiveFactory());
-    oux.directive("ouxProcedure", OUX.Procedure.Directive);
-    oux.directive("ouxParameter", OUX.Parameter.Directive);
-    oux.directive("ouxForm", OUX.Form.DirectiveFactory());
-    oux.directive("ouxInput", OUX.Input.Directive);
-    oux.directive("ouxSave", OUX.Save.Directive);
-    oux.directive("ouxFormat", OUX.Format.DirectiveFactory());
-
-    return oux;
-
-});
+oux.directive("oux", OUX.Context.DirectiveFactory());
+oux.directive("ouxProcedure", OUX.Procedure.Directive);
+oux.directive("ouxParameter", OUX.Parameter.Directive);
+oux.directive("ouxForm", OUX.Form.DirectiveFactory());
+oux.directive("ouxInput", OUX.Input.Directive);
+oux.directive("ouxSave", OUX.Save.Directive);
+oux.directive("ouxFormat", OUX.Format.DirectiveFactory());

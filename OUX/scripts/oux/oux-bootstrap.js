@@ -28,13 +28,18 @@ define(["oux-core"], function (oux) {
                 "<label class=\"control-label col-sm-3\">{{ouxInput.label}}</label>" +
                 "<div class=\"col-sm-9\"><div ng-class=\"{'input-group': ouxInput.hasAddons}\">" +
                 "<input type=\"{{ouxInput.inputType}}\" class=\"form-control\" ng-model=\"ouxInput.model\" ng-required=\"ouxInput.required\" " +
-                "ng-attr-oux-format=\"{{ouxInput.format}}\" ng-attr-oux-save=\"{{ouxInput.save}}\" />" +
+                "ng-attr-oux-format=\"{{ouxInput.format}}\" ng-attr-oux-save=\"{{ouxInput.save}}\" " +
+                "ng-attr-uib-datepicker-popup=\"{{ouxInput.datePickerFormat}}\" ng-attr-is-open=\"ouxInput.isOpen\" />" +
                 "<span class=\"input-group-btn\" ng-if=\"ouxInput.format === 'email'\">" +
                 "<a class=\"btn btn-default\" ng-href=\"mailto:{{ouxInput.model}}\" ng-disabled=\"ouxInput.invalid\" title=\"Send Email\">" +
                 "<i class=\"fa fa-envelope-o\"></i></a></span>" +
                 "<span class=\"input-group-btn\" ng-if=\"ouxInput.format === 'url'\">" +
                 "<a class=\"btn btn-default\" ng-href=\"{{ouxInput.model}}\" target=\"_blank\" ng-disabled=\"ouxInput.invalid\"" +
                 "title=\"Visit Website\"><i class=\"fa fa-globe\"></i></a></span>" +
+                "<span class=\"input-group-btn\" ng-if=\"ouxInput.format === 'date'\">" +
+                "<button type=\"button\" class=\"btn btn-default\" ng-click=\"ouxInput.isOpen = !ouxInput.isOpen\">" +
+                "<i class=\"fa fa-calendar\"></i>" +
+                "</button>" +
                 "</div></div>" +
                 "</div>");
             $log.debug("OUX bootstrap templates loaded");

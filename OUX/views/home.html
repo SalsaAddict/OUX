@@ -1,11 +1,13 @@
-﻿<div class="container" ng-init="Person = {Show: false, Forename: 123456.45, Surname: 'Henry', DOB: '1975-08-03'}">
+﻿<div class="container" ng-init="Person = {Show: false, Forename: 123456.45, Surname: 'Henry', Amount: 1234567890.855, Quantity: 12345678}">
     <oux>
         <oux-form heading="Claim Detail" load="apiClaim as Claim" save="apiClaimSave">
             <oux-input label="Forename" ng-model="Person.Forename" save required></oux-input>
             <oux-input label="Surname" ng-model="Person.Surname" save required></oux-input>
+            <oux-input label="Date of Birth" ng-model="Person.DOB" format="date" save required></oux-input>
             <oux-input label="Email Address" ng-model="Person.Email" format="email" save required></oux-input>
             <oux-input label="Website" ng-model="Person.Website" format="url" save></oux-input>
             <oux-input label="Amount" ng-model="Person.Amount" format="decimal" save required></oux-input>
+            <oux-input label="Quantity" ng-model="Person.Quantity" format="integer" save required></oux-input>
         </oux-form>
     </oux>
 </div>

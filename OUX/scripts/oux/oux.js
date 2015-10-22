@@ -20,7 +20,9 @@ require.config({
         "angular": { exports: "angular" },
         "angular-locale": { deps: ["angular"] },
         "angular-route": { deps: ["angular", "angular-locale"] },
-        "angular-ui-bootstrap": { deps: ["angular", "angular-locale"] }
+        "angular-ui-bootstrap": { deps: ["angular", "angular-locale"] },
+        "moment": { exports: "moment" },
+        "oux-core": { deps: ["angular", "angular-locale", "angular-route", "angular-ui-bootstrap", "moment"], exports: "oux" }
     }
 });
 require(["angular", "oux-core", "app"], function (angular, oux, app) {
